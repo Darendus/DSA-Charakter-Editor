@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Scraped data
+data/
+
+# Persönliche Charakterdaten
+characters/*.json
+
+# Misc
+.env
+*.log

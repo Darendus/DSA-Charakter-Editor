@@ -1,0 +1,26 @@
+{
+  "name": "dsa-charakter-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lokaler Charakter-Editor für Das Schwarze Auge (DSA 5) mit Regelwiki-Scraper",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "scrape": "tsx packages/scraper/src/cli.ts",
+    "dev": "npm-run-all --parallel dev:server dev:client",
+    "dev:server": "npm run dev --workspace @dsa/server",
+    "dev:client": "npm run dev --workspace @dsa/client",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,354 @@
+:root {
+  --bg: #f6f4ef;
+  --panel: #ffffff;
+  --ink: #2b2620;
+  --muted: #7a7062;
+  --line: #ddd6c9;
+  --accent: #8c2b2b;
+  --accent-ink: #ffffff;
+  --danger: #a33;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.6rem 1.2rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.app-title {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.app-header nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.app-header a {
+  color: var(--accent-ink);
+  opacity: 0.75;
+  text-decoration: none;
+  padding: 0.2rem 0;
+}
+
+.app-header a.active {
+  opacity: 1;
+  border-bottom: 2px solid var(--accent-ink);
+}
+
+.app-main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.2rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0.2rem 0 1rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: 1.2rem 0 0.5rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.error {
+  color: var(--danger);
+}
+
+.pre-wrap {
+  white-space: pre-wrap;
+}
+
+button {
+  font: inherit;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+button.danger {
+  color: var(--danger);
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.create-row {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1.2rem;
+}
+
+.create-row input {
+  flex: 1;
+  max-width: 24rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.table thead th {
+  background: var(--bg);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Editor */
+.editor-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.ap-budget {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.5rem 0.8rem;
+  margin: 0.8rem 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.ap-rest {
+  font-weight: 700;
+}
+
+.ap-rest.negative {
+  color: var(--danger);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+
+.tab {
+  border-radius: 6px 6px 0 0;
+}
+
+.tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  max-width: 46rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field.span-2 {
+  grid-column: span 2;
+}
+
+.stepper {
+  white-space: nowrap;
+}
+
+.stepper .value {
+  display: inline-block;
+  min-width: 2.2rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.eigenschaften {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 1.4rem;
+  align-items: start;
+}
+
+.derived dl {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.derived dl > div {
+  display: flex;
+  justify-content: space-between;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+}
+
+.derived dt {
+  color: var(--muted);
+}
+
+.derived dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.talente section {
+  margin-bottom: 1.4rem;
+}
+
+/* Datenbrowser */
+.browser-controls {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.browser-controls input {
+  flex: 1;
+  max-width: 20rem;
+}
+
+.browser-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+
+.browser-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.browser-list button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.browser-list button.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.browser-detail {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.browser-detail h2 {
+  margin-top: 0;
+}
+
+.table.fields th {
+  width: 12rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.table.fields td {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 800px) {
+  .eigenschaften,
+  .browser-layout,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
