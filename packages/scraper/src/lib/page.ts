@@ -6,9 +6,9 @@ import { BASE_URL, cleanText, isSameHost, resolveUrl } from "./util";
 /**
  * Das Regelwiki liefert zwei Seitenlayouts:
  *
- * 1. "static"  — normale Contao-Artikel: `#main .ce_text` mit `<h1>` und
+ * 1. "static"  - normale Contao-Artikel: `#main .ce_text` mit `<h1>` und
  *    Feldern als `<p><strong>Label: </strong>Wert</p>`.
- * 2. "grid"    — die per Query-Parameter adressierten Detailseiten
+ * 2. "grid"    - die per Query-Parameter adressierten Detailseiten
  *    (zauber.html?zauber=…, vorteil.html?vorteil=… usw.). Dort steckt ein
  *    komplettes eingebettetes HTML-Dokument im Artikel; die Felder sind
  *    `<div class="spalte1">Label</div><div>Wert</div>`-Paare, Abschnitte
@@ -17,11 +17,18 @@ import { BASE_URL, cleanText, isSameHost, resolveUrl } from "./util";
  * Unterseiten-Navigation (Crawl-Frontier) steht in `nav.mod_navigation`,
  * Auswahlseiten verlinken Einträge als `<a href='detail.html?param=Name'>`.
  */
+export interface ParsedTable {
+  headers: string[];
+  rows: string[][];
+}
+
 export interface ParsedPage {
   kind: "static" | "grid" | "empty";
   title?: string;
   fields: Record<string, string>;
   description?: string;
+  /** Mehrzeilige Tabellen (einzeilige werden zu `fields`) */
+  tables: ParsedTable[];
   publications: string[];
   /** Kind-Seiten aus der Unternavigation (absolute URLs) */
   navLinks: string[];
@@ -34,8 +41,12 @@ const QUERY_LINK = /\.html\?[\w-]+=/;
 export function parsePage(html: string, pageUrl: string): ParsedPage {
   const $ = cheerio.load(html);
 
+  // Eingebettete Dokumente bringen eigenes <style>/<title> mit - deren
+  // Inhalt darf nicht als Beschreibungstext im Eintrag landen.
+  $("script, style, noscript, link, meta, title").remove();
+
   // Contao schreibt wurzel-relative Links ohne führenden Slash
-  // ("ruestkammer/ausruestungspakete/x.html" auch auf Unterseiten) — deshalb
+  // ("ruestkammer/ausruestungspakete/x.html" auch auf Unterseiten) - deshalb
   // wird immer gegen die Site-Wurzel aufgelöst, nie gegen die aktuelle Seite.
   void pageUrl;
 
@@ -87,7 +98,7 @@ function parsePublications(raw: string): string[] {
 }
 
 function parseStatic($: CheerioAPI): Omit<ParsedPage, "navLinks" | "queryLinks"> {
-  // Manche Detailseiten haben kein <h1> — dann trägt der Breadcrumb den Seitennamen.
+  // Manche Detailseiten haben kein <h1> - dann trägt der Breadcrumb den Seitennamen.
   const title =
     cleanText($("#main h1").first().text()) ||
     cleanText($(".mod_breadcrumb li.active").first().text()) ||
@@ -105,7 +116,9 @@ function parseStatic($: CheerioAPI): Omit<ParsedPage, "navLinks" | "queryLinks">
     }
   };
 
-  // Rüstkammer-Seiten: Werte stehen in einer Tabelle (th = Label, eine Datenzeile)
+  // Rüstkammer-Seiten: Werte stehen in einer Tabelle (th = Label, eine Datenzeile);
+  // mehrzeilige Tabellen (Übersichten) bleiben strukturiert erhalten.
+  const tables: ParsedTable[] = [];
   $("#main table").each((_, tbl) => {
     const headers = $(tbl)
       .find("thead th")
@@ -122,15 +135,15 @@ function parseStatic($: CheerioAPI): Omit<ParsedPage, "navLinks" | "queryLinks">
         if (header && cells[idx]) addField(header, cells[idx]!);
       });
     } else {
-      // Mehrzeilige Tabellen (Übersichten) als Rohtext erhalten
-      const lines = rows.map((row) =>
-        $(row)
-          .find("td")
-          .toArray()
-          .map((td) => cleanText($(td).text()))
-          .join(" | ")
-      );
-      addField("Tabelle", `${headers.join(" | ")}\n${lines.join("\n")}`);
+      tables.push({
+        headers,
+        rows: rows.map((row) =>
+          $(row)
+            .find("td")
+            .toArray()
+            .map((td) => cleanText($(td).text()))
+        ),
+      });
     }
   });
 
@@ -170,12 +183,14 @@ function parseStatic($: CheerioAPI): Omit<ParsedPage, "navLinks" | "queryLinks">
   });
 
   const description = descriptionParts.join("\n\n") || undefined;
-  const isEmpty = !title || (Object.keys(fields).length === 0 && !description);
+  const isEmpty =
+    !title || (Object.keys(fields).length === 0 && !description && tables.length === 0);
   return {
     kind: isEmpty ? "empty" : "static",
     title,
     fields,
     description,
+    tables,
     publications,
   };
 }
@@ -229,5 +244,5 @@ function parseGrid($: CheerioAPI): Omit<ParsedPage, "navLinks" | "queryLinks" | 
     }
   }
 
-  return { title, fields, publications, description: undefined };
+  return { title, fields, publications, description: undefined, tables: [] };
 }

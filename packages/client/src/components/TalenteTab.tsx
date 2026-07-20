@@ -1,5 +1,11 @@
-import { improvementCostRange, type EntityBase, type ImprovementColumn } from "@dsa/schema";
+import {
+  improvementCost,
+  improvementCostRange,
+  type EntityBase,
+  type ImprovementColumn,
+} from "@dsa/schema";
 import { useCharacterStore, useDataStore } from "../store";
+import { canAfford, useApBudget } from "../useApBudget";
 
 type TalentEntry = EntityBase & {
   check?: [string, string, string];
@@ -11,6 +17,7 @@ export function TalenteTab() {
   const talente = useDataStore((s) => s.categories["talente"]?.entries) as
     | TalentEntry[]
     | undefined;
+  const budget = useApBudget(current);
   if (!current) return null;
 
   if (!talente) {
@@ -55,7 +62,7 @@ export function TalenteTab() {
                 <th>Probe</th>
                 <th>Sf.</th>
                 <th>FW</th>
-                <th>AP</th>
+                {current.useAp && <th>AP</th>}
               </tr>
             </thead>
             <tbody>
@@ -72,11 +79,24 @@ export function TalenteTab() {
                         −
                       </button>
                       <span className="value">{value}</span>
-                      <button onClick={() => setValue(talent, value + 1)} disabled={value >= 20}>
+                      <button
+                        onClick={() => setValue(talent, value + 1)}
+                        disabled={
+                          value >= 20 ||
+                          !canAfford(current, budget, improvementCost(column, value + 1))
+                        }
+                        title={
+                          !canAfford(current, budget, improvementCost(column, value + 1))
+                            ? "Nicht genug AP"
+                            : undefined
+                        }
+                      >
                         +
                       </button>
                     </td>
-                    <td>{value > 0 ? `${improvementCostRange(column, 0, value)} AP` : "–"}</td>
+                    {current.useAp && (
+                      <td>{value > 0 ? `${improvementCostRange(column, 0, value)} AP` : "–"}</td>
+                    )}
                   </tr>
                 );
               })}

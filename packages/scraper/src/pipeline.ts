@@ -19,6 +19,7 @@ export interface CategoryResult {
   count: number;
   pagesVisited: number;
   errors: ScrapeError[];
+  aborted: boolean;
 }
 
 interface QueueItem {
@@ -42,13 +43,14 @@ export async function scrapeCategory(
   config: CategoryConfig,
   fetcher: Fetcher,
   outDir: string,
-  options: { limit?: number; log?: (msg: string) => void } = {}
+  options: { limit?: number; log?: (msg: string) => void; signal?: AbortSignal } = {}
 ): Promise<CategoryResult> {
   const log = options.log ?? (() => {});
   const maxDepth = config.maxDepth ?? 6;
+  let aborted = false;
 
   // Zusätzliche Wurzeln (Index 1+) zählen als Unterseiten (depth 1),
-  // damit sie — anders als die Sektions-Startseite — Einträge werden können.
+  // damit sie - anders als die Sektions-Startseite - Einträge werden können.
   const queue: QueueItem[] = config.roots
     .map((root) => resolveUrl(root, BASE_URL))
     .filter((url): url is string => Boolean(url))
@@ -61,14 +63,23 @@ export async function scrapeCategory(
   let pagesVisited = 0;
 
   while (queue.length > 0) {
+    if (options.signal?.aborted) {
+      aborted = true;
+      break;
+    }
     if (options.limit && entries.length >= options.limit) break;
     const { url, depth } = queue.shift()!;
 
     let html: string;
     try {
-      const result = await fetcher.get(url);
+      const result = await fetcher.get(url, options.signal);
       html = result.html;
     } catch (error) {
+      // Abbruch während des Downloads ist kein Seitenfehler
+      if (options.signal?.aborted) {
+        aborted = true;
+        break;
+      }
       errors.push({ url, reason: String(error) });
       continue;
     }
@@ -85,10 +96,14 @@ export async function scrapeCategory(
     // Eintrag übernehmen, wenn die Seite echten Inhalt hat.
     // Wurzel-/Indexseiten (kind: "empty") werden nur zum Weiterkrabbeln genutzt;
     // Auswahl-/Listenseiten (viele Query-Links, keine Felder) ebenfalls.
-    const isListPage = page.queryLinks.length >= 5 && Object.keys(page.fields).length === 0;
-    // Sektions-Wurzeln (spezies.html …) sind Übersichten, keine Einträge
-    const isSectionRoot = config.crawlNav && depth === 0;
-    const isEntryPage = page.kind !== "empty" && !isListPage && !isSectionRoot;
+    const isListPage =
+      page.queryLinks.length >= 5 &&
+      Object.keys(page.fields).length === 0 &&
+      page.tables.length === 0;
+    // Wurzelseiten (Sektions-Übersichten UND Auswahlseiten) sind nie Einträge -
+    // Auswahlseiten tragen z. T. eine Feld-Legende, die sonst als Eintrag durchginge.
+    const isRootPage = depth === 0;
+    const isEntryPage = page.kind !== "empty" && !isListPage && !isRootPage;
     if (isEntryPage && page.title) {
       let id = slugify(page.title) || slugify(url);
       while (usedIds.has(id)) id = `${id}-x`;
@@ -101,6 +116,7 @@ export async function scrapeCategory(
         url,
         fields: page.fields,
         description: page.description,
+        tables: page.tables.length ? page.tables : undefined,
         publications: page.publications.length ? page.publications : undefined,
         scrapedAt: new Date().toISOString(),
       };
@@ -114,7 +130,7 @@ export async function scrapeCategory(
     }
 
     // Frontier erweitern. Query-Links werden nur von Listen-/Indexseiten und
-    // von Auswahl-Wurzeln verfolgt — Detailseiten verlinken quer in andere
+    // von Auswahl-Wurzeln verfolgt - Detailseiten verlinken quer in andere
     // Kategorien (z. B. Spezies → Vorteile) und würden diese sonst verschmutzen.
     const followQueryLinks =
       isListPage || page.kind === "empty" || (depth === 0 && !config.crawlNav);
@@ -129,17 +145,20 @@ export async function scrapeCategory(
   }
 
   const refined = entries.map(refineEntity);
-
   const fileName = `${config.key}.json`;
-  const payload: CategoryFile = {
-    category: config.key,
-    source: resolveUrl(config.roots[0]!, BASE_URL)!,
-    scrapedAt: new Date().toISOString(),
-    count: refined.length,
-    entries: refined,
-  };
-  await mkdir(outDir, { recursive: true });
-  await writeFile(join(outDir, fileName), JSON.stringify(payload, null, 2), "utf8");
 
-  return { category: config.key, file: fileName, count: refined.length, pagesVisited, errors };
+  // Bei Abbruch keine unvollständige Kategorie-Datei schreiben
+  if (!aborted) {
+    const payload: CategoryFile = {
+      category: config.key,
+      source: resolveUrl(config.roots[0]!, BASE_URL)!,
+      scrapedAt: new Date().toISOString(),
+      count: refined.length,
+      entries: refined,
+    };
+    await mkdir(outDir, { recursive: true });
+    await writeFile(join(outDir, fileName), JSON.stringify(payload, null, 2), "utf8");
+  }
+
+  return { category: config.key, file: fileName, count: refined.length, pagesVisited, errors, aborted };
 }

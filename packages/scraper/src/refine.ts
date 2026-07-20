@@ -1,9 +1,9 @@
-import { AttributeIds, type EntityBase } from "@dsa/schema";
+import { AttributeIds, attributeIdFromName, type AttributeId, type EntityBase } from "@dsa/schema";
 
 /**
  * Ergänzt einen Roh-Eintrag um strukturiert geparste Werte, wo der Freitext
  * zuverlässig interpretierbar ist. Nicht Parsbares bleibt einfach roh in
- * `fields` stehen — das UI kann immer auf den Originaltext zurückfallen.
+ * `fields` stehen - das UI kann immer auf den Originaltext zurückfallen.
  */
 export function refineEntity(entity: EntityBase): EntityBase & Record<string, unknown> {
   const result: EntityBase & Record<string, unknown> = { ...entity };
@@ -35,6 +35,15 @@ export function refineEntity(entity: EntityBase): EntityBase & Record<string, un
 
   const column = fields["Steigerungsfaktor"]?.match(/^\s*([A-E])\b/);
   if (column) result.improvementColumn = column[1];
+
+  // Kampftechniken: "Gewandheit, Körperkraft" → ["GE", "KK"]
+  if (entity.category === "kampftechniken" && fields["Leiteigenschaft"]) {
+    const attrs = fields["Leiteigenschaft"]
+      .split(/[,/]| und /)
+      .map((name) => attributeIdFromName(name))
+      .filter((id): id is AttributeId => Boolean(id));
+    if (attrs.length) result.primaryAttributes = attrs;
+  }
 
   const lp = firstInt(fields["Lebensenergie-Grundwert"]);
   if (lp !== undefined) result.lpBase = lp;

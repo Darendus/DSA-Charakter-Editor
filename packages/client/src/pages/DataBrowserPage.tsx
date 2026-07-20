@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { EntityBase } from "@dsa/schema";
+import { ScrapePanel } from "../components/ScrapePanel";
 import { useDataStore } from "../store";
 
 export function DataBrowserPage() {
-  const { manifest, manifestError, loadManifest, loadCategory, categories } = useDataStore();
+  const { manifest, manifestError, loadManifest, loadCategory, categories, dataVersion } =
+    useDataStore();
   const [category, setCategory] = useState<string>();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<EntityBase>();
@@ -12,6 +14,8 @@ export function DataBrowserPage() {
     void loadManifest();
   }, [loadManifest]);
 
+  // dataVersion in den Deps: nach einem Scrape-Lauf (reset leert den Cache und
+  // erhöht dataVersion) wird die aktuelle Kategorie neu geladen statt leer zu bleiben.
   useEffect(() => {
     if (category) {
       setSelected(undefined);
@@ -19,7 +23,7 @@ export function DataBrowserPage() {
         /* Fehler zeigt die Liste an */
       });
     }
-  }, [category, loadCategory]);
+  }, [category, loadCategory, dataVersion]);
 
   const entries = category ? (categories[category]?.entries ?? []) : [];
   const filtered = useMemo(() => {
@@ -32,9 +36,8 @@ export function DataBrowserPage() {
     return (
       <div className="page">
         <h1>Regeldaten</h1>
-        <p className="error">
-          {manifestError} — führe <code>npm run scrape</code> aus, um die Daten zu laden.
-        </p>
+        <p className="error">{manifestError}</p>
+        <ScrapePanel />
       </div>
     );
   }
@@ -42,6 +45,7 @@ export function DataBrowserPage() {
   return (
     <div className="page browser">
       <h1>Regeldaten</h1>
+      <ScrapePanel />
       <div className="browser-controls">
         <select value={category ?? ""} onChange={(e) => setCategory(e.target.value || undefined)}>
           <option value="">– Kategorie wählen –</option>
@@ -78,16 +82,40 @@ export function DataBrowserPage() {
           {selected ? (
             <>
               <h2>{selected.name}</h2>
-              <table className="table fields">
-                <tbody>
-                  {Object.entries(selected.fields).map(([label, value]) => (
-                    <tr key={label}>
-                      <th>{label}</th>
-                      <td>{value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {Object.keys(selected.fields).length > 0 && (
+                <table className="table fields">
+                  <tbody>
+                    {Object.entries(selected.fields).map(([label, value]) => (
+                      <tr key={label}>
+                        <th>{label}</th>
+                        <td>{value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {selected.tables?.map((table, tableIndex) => (
+                <div key={tableIndex} className="table-scroll">
+                  <table className="table data-table">
+                    <thead>
+                      <tr>
+                        {table.headers.map((header, i) => (
+                          <th key={i}>{header}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {table.rows.map((row, rowIndex) => (
+                        <tr key={rowIndex}>
+                          {row.map((cell, i) => (
+                            <td key={i}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
               {selected.description && <p className="pre-wrap">{selected.description}</p>}
               {selected.publications && selected.publications.length > 0 && (
                 <p className="muted small">Publikation: {selected.publications.join(" · ")}</p>

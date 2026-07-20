@@ -5,6 +5,7 @@ import { useCharacterStore } from "../store";
 export function CharacterListPage() {
   const { list, listLoaded, loadList, create, remove } = useCharacterStore();
   const [name, setName] = useState("");
+  const [useAp, setUseAp] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -12,7 +13,7 @@ export function CharacterListPage() {
   }, [loadList]);
 
   const handleCreate = async () => {
-    const character = await create(name.trim() || "Namenloser Held");
+    const character = await create(name.trim() || "Namenloser Held", useAp);
     setName("");
     navigate(`/charakter/${character.id}`);
   };
@@ -28,6 +29,10 @@ export function CharacterListPage() {
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && void handleCreate()}
         />
+        <label className="checkbox" title="Für Homebrew-Systeme mit eigener Werteverteilung">
+          <input type="checkbox" checked={!useAp} onChange={(e) => setUseAp(!e.target.checked)} />
+          Ohne AP (Homebrew)
+        </label>
         <button className="primary" onClick={() => void handleCreate()}>
           Neuer Charakter
         </button>
@@ -64,7 +69,7 @@ export function CharacterListPage() {
                 </td>
                 <td>{c.species?.name ?? "–"}</td>
                 <td>{c.profession?.name ?? "–"}</td>
-                <td>{c.apTotal}</td>
+                <td>{c.useAp ? c.apTotal : "ohne AP"}</td>
                 <td className="row-actions">
                   <button onClick={() => navigate(`/charakter/${c.id}`)}>Öffnen</button>
                   <button

@@ -1,0 +1,41 @@
+{
+  "name": "@dsa/desktop",
+  "version": "0.2.0",
+  "private": true,
+  "description": "DSA Charakter-Editor als Desktop-App",
+  "author": "Darendus",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build:main": "node esbuild.mjs",
+    "start": "npm run build:main && node launch.mjs",
+    "dist": "npm run build:main && electron-builder --win portable",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dsa/schema": "*",
+    "@dsa/scraper": "*",
+    "@dsa/server": "*"
+  },
+  "devDependencies": {
+    "electron": "^31.3.0",
+    "electron-builder": "^24.13.3",
+    "esbuild": "^0.23.0"
+  },
+  "build": {
+    "appId": "de.darendus.dsa-charakter-editor",
+    "productName": "DSA Charakter-Editor",
+    "electronVersion": "31.7.7",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "DSA-Charakter-Editor.exe"
+    }
+  }
+}

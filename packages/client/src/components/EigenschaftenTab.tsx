@@ -4,10 +4,12 @@ import {
   attributeApCost,
   derivedValues,
   HUMAN_BASE,
+  improvementCost,
   type AttributeId,
   type SpeciesBaseValues,
 } from "@dsa/schema";
 import { useCharacterStore, useDataStore } from "../store";
+import { canAfford, useApBudget } from "../useApBudget";
 
 const ATTRIBUTE_NAMES: Record<AttributeId, string> = {
   MU: "Mut",
@@ -23,6 +25,7 @@ const ATTRIBUTE_NAMES: Record<AttributeId, string> = {
 export function EigenschaftenTab() {
   const { current, update } = useCharacterStore();
   const findEntry = useDataStore((s) => s.findEntry);
+  const budget = useApBudget(current);
   if (!current) return null;
 
   const speciesEntry = current.species
@@ -54,7 +57,7 @@ export function EigenschaftenTab() {
           <tr>
             <th>Eigenschaft</th>
             <th>Wert</th>
-            <th>AP-Kosten</th>
+            {current.useAp && <th>AP-Kosten</th>}
           </tr>
         </thead>
         <tbody>
@@ -70,11 +73,21 @@ export function EigenschaftenTab() {
                     −
                   </button>
                   <span className="value">{value}</span>
-                  <button onClick={() => setAttribute(id, value + 1)} disabled={value >= 19}>
+                  <button
+                    onClick={() => setAttribute(id, value + 1)}
+                    disabled={
+                      value >= 19 || !canAfford(current, budget, improvementCost("E", value + 1))
+                    }
+                    title={
+                      !canAfford(current, budget, improvementCost("E", value + 1))
+                        ? "Nicht genug AP"
+                        : undefined
+                    }
+                  >
                     +
                   </button>
                 </td>
-                <td>{attributeApCost(value)} AP</td>
+                {current.useAp && <td>{attributeApCost(value)} AP</td>}
               </tr>
             );
           })}
@@ -127,7 +140,7 @@ export function EigenschaftenTab() {
         </dl>
         {!speciesEntry && (
           <p className="muted small">
-            Basiswerte: Mensch (Standard) — wähle unter Grunddaten eine Spezies für korrekte Werte.
+            Basiswerte: Mensch (Standard) - wähle unter Grunddaten eine Spezies für korrekte Werte.
           </p>
         )}
       </div>

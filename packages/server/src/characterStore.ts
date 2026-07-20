@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { CharacterSchema, type Character } from "@dsa/schema";
 
 /**
- * Charaktere liegen als einzelne JSON-Dateien in characters/ —
+ * Charaktere liegen als einzelne JSON-Dateien in characters/ -
  * bewusst simpel gehalten, damit sie von Hand editiert, kopiert
  * und versioniert werden können.
  */

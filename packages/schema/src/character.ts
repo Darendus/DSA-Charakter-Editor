@@ -30,6 +30,20 @@ export const EquipmentEntrySchema = z.object({
 });
 export type EquipmentEntry = z.infer<typeof EquipmentEntrySchema>;
 
+/** Geführte Waffe; die Kampftechnik wählt der Nutzer (Waffendaten nennen sie nicht). */
+export const WeaponEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  combatTechniqueId: z.string().optional(),
+});
+export type WeaponEntry = z.infer<typeof WeaponEntrySchema>;
+
+export const ArmorEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+export type ArmorEntry = z.infer<typeof ArmorEntrySchema>;
+
 export const AttributesSchema = z.object({
   MU: z.number().int().min(8).max(25).default(8),
   KL: z.number().int().min(8).max(25).default(8),
@@ -47,6 +61,12 @@ export const CharacterSchema = z.object({
   name: z.string().min(1),
   player: z.string().optional(),
   notes: z.string().optional(),
+
+  /**
+   * Mit Abenteuerpunkten spielen? `false` für Homebrew-Systeme mit eigener
+   * Werteverteilung: keine Kostenanzeige, kein AP-Budget, keine AP-Grenzen.
+   */
+  useAp: z.boolean().default(true),
 
   /** Gesamtbudget an Abenteuerpunkten (Standard-Erfahrungsgrad "Erfahren" = 1100) */
   apTotal: z.number().int().default(1100),
@@ -81,6 +101,9 @@ export const CharacterSchema = z.object({
     .object({ name: z.string(), primaryAttribute: AttributeIdSchema.optional() })
     .optional(),
 
+  weapons: z.array(WeaponEntrySchema).default([]),
+  armor: z.array(ArmorEntrySchema).default([]),
+
   equipment: z.array(EquipmentEntrySchema).default([]),
   money: z
     .object({
@@ -97,11 +120,12 @@ export const CharacterSchema = z.object({
 export type Character = z.infer<typeof CharacterSchema>;
 
 /** Neuer, leerer Charakter mit Standardwerten. */
-export function createEmptyCharacter(id: string, name: string): Character {
+export function createEmptyCharacter(id: string, name: string, useAp = true): Character {
   const now = new Date().toISOString();
   return CharacterSchema.parse({
     id,
     name,
+    useAp,
     createdAt: now,
     updatedAt: now,
   });

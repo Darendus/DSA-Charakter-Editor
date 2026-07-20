@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCharacterStore, useDataStore } from "../store";
 import { ApBudget } from "../components/ApBudget";
+import { BesitzTab } from "../components/BesitzTab";
 import { EigenschaftenTab } from "../components/EigenschaftenTab";
+import { GoetterwirkenTab } from "../components/GoetterwirkenTab";
 import { GrunddatenTab } from "../components/GrunddatenTab";
-import { StubTab } from "../components/StubTab";
+import { KampfTab } from "../components/KampfTab";
+import { MagieTab } from "../components/MagieTab";
 import { TalenteTab } from "../components/TalenteTab";
 
 const TABS = [
@@ -33,11 +36,24 @@ export function CharacterEditorPage() {
     return close;
   }, [id, open, close]);
 
-  // Basisdaten für AP-Berechnung und Picker vorladen
+  // Alle kostenrelevanten Kategorien vorladen, damit die AP-Bilanz sofort
+  // stimmt (sonst würden Zauber/Kampftechniken/Liturgien bis zum Öffnen des
+  // jeweiligen Tabs mit der billigsten Spalte A veranschlagt).
   useEffect(() => {
-    for (const key of ["spezies", "kulturen", "professionen", "talente"]) {
+    const costCategories = [
+      "spezies",
+      "kulturen",
+      "professionen",
+      "talente",
+      "kampftechniken",
+      "zauber",
+      "rituale",
+      "liturgien",
+      "zeremonien",
+    ];
+    for (const key of costCategories) {
       loadCategory(key).catch(() => {
-        /* Daten fehlen — Hinweis kommt aus den Tabs */
+        /* Daten fehlen - Hinweis kommt aus den Tabs */
       });
     }
   }, [loadCategory]);
@@ -69,7 +85,7 @@ export function CharacterEditorPage() {
         </div>
       </div>
 
-      <ApBudget character={current} />
+      {current.useAp && <ApBudget character={current} />}
 
       <nav className="tabs">
         {TABS.map((t) => (
@@ -87,12 +103,10 @@ export function CharacterEditorPage() {
         {tab === "grunddaten" && <GrunddatenTab />}
         {tab === "eigenschaften" && <EigenschaftenTab />}
         {tab === "talente" && <TalenteTab />}
-        {tab === "kampf" && <StubTab name="Kampf" hint="Kampftechniken, Waffen und Rüstung" />}
-        {tab === "magie" && <StubTab name="Magie" hint="Zauber, Rituale und Zaubertricks" />}
-        {tab === "goetterwirken" && (
-          <StubTab name="Götterwirken" hint="Liturgien, Zeremonien und Segnungen" />
-        )}
-        {tab === "besitz" && <StubTab name="Besitz" hint="Ausrüstung, Waffen und Geld" />}
+        {tab === "kampf" && <KampfTab />}
+        {tab === "magie" && <MagieTab />}
+        {tab === "goetterwirken" && <GoetterwirkenTab />}
+        {tab === "besitz" && <BesitzTab />}
       </div>
     </div>
   );

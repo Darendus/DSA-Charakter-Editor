@@ -13,7 +13,9 @@
     "dev:server": "npm run dev --workspace @dsa/server",
     "dev:client": "npm run dev --workspace @dsa/client",
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "desktop": "npm run build --workspace @dsa/client && npm run start --workspace @dsa/desktop",
+    "dist": "npm run build --workspace @dsa/client && npm run dist --workspace @dsa/desktop"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

@@ -6,6 +6,13 @@ import { z } from "zod";
  * Zusätzlich geparste, strukturierte Werte sind optional und können fehlen,
  * wenn der Freitext nicht sauber zu interpretieren war.
  */
+/** Mehrzeilige Wiki-Tabelle (z. B. Sprachenliste, Ausbildungsaufsätze) */
+export const EntityTableSchema = z.object({
+  headers: z.array(z.string()),
+  rows: z.array(z.array(z.string())),
+});
+export type EntityTable = z.infer<typeof EntityTableSchema>;
+
 export const EntityBaseSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -15,6 +22,8 @@ export const EntityBaseSchema = z.object({
   fields: z.record(z.string(), z.string()),
   /** Fließtext-Absätze ohne Label (Beschreibungen, Regeltext) */
   description: z.string().optional(),
+  /** Mehrzeilige Tabellen, strukturiert (einzeilige Tabellen landen in `fields`) */
+  tables: z.array(EntityTableSchema).optional(),
   /** Publikationsangaben ("Regelwerk Seite 104" o. ä.) */
   publications: z.array(z.string()).optional(),
   scrapedAt: z.string(),
@@ -24,6 +33,29 @@ export type EntityBase = z.infer<typeof EntityBaseSchema>;
 export const AttributeIds = ["MU", "KL", "IN", "CH", "FF", "GE", "KO", "KK"] as const;
 export const AttributeIdSchema = z.enum(AttributeIds);
 export type AttributeId = z.infer<typeof AttributeIdSchema>;
+
+export const ATTRIBUTE_LABELS: Record<AttributeId, string> = {
+  MU: "Mut",
+  KL: "Klugheit",
+  IN: "Intuition",
+  CH: "Charisma",
+  FF: "Fingerfertigkeit",
+  GE: "Gewandtheit",
+  KO: "Konstitution",
+  KK: "Körperkraft",
+};
+
+/** "Klugheit"/"KL" → "KL"; kennt auch die Wiki-Schreibvariante "Gewandheit". */
+export function attributeIdFromName(name: string): AttributeId | undefined {
+  const trimmed = name.trim();
+  const upper = trimmed.toUpperCase();
+  if ((AttributeIds as readonly string[]).includes(upper)) return upper as AttributeId;
+  const lower = trimmed.toLowerCase();
+  if (lower === "gewandheit") return "GE";
+  return (Object.entries(ATTRIBUTE_LABELS) as [AttributeId, string][]).find(
+    ([, label]) => label.toLowerCase() === lower
+  )?.[0];
+}
 
 export const ImprovementColumnSchema = z.enum(["A", "B", "C", "D", "E"]);
 export type ImprovementColumn = z.infer<typeof ImprovementColumnSchema>;

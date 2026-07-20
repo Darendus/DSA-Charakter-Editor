@@ -33,6 +33,31 @@ export function activationCost(column: ImprovementColumn): number {
 /** Eigenschaften starten bei 8 und werden über Spalte E gesteigert. */
 export const ATTRIBUTE_START = 8;
 
+/** Kampftechniken starten beim Basiswert 6. */
+export const COMBAT_TECHNIQUE_START = 6;
+
+// ---------------------------------------------------------------------------
+// Kampfwerte (DSA 5): Bonus = je 3 volle Punkte der Leiteigenschaft über 8
+// ---------------------------------------------------------------------------
+
+const attributeBonus = (value: number) => Math.max(0, Math.floor((value - 8) / 3));
+
+/** Attacke (Nahkampf): KtW + Bonus aus MU */
+export function attackValue(ktw: number, mu: number): number {
+  return ktw + attributeBonus(mu);
+}
+
+/** Parade: ⌈KtW/2⌉ + Bonus aus der höchsten Leiteigenschaft der Kampftechnik */
+export function parryValue(ktw: number, primaryAttributeValues: number[]): number {
+  const best = primaryAttributeValues.length ? Math.max(...primaryAttributeValues) : 8;
+  return Math.ceil(ktw / 2) + attributeBonus(best);
+}
+
+/** Fernkampf: KtW + Bonus aus FF */
+export function rangedValue(ktw: number, ff: number): number {
+  return ktw + attributeBonus(ff);
+}
+
 export function attributeApCost(value: number): number {
   return improvementCostRange("E", ATTRIBUTE_START, value);
 }
@@ -126,7 +151,7 @@ export interface ApBreakdown {
 
 /**
  * Zählt die ausgegebenen AP eines Charakters zusammen.
- * Fertigkeiten werden ohne Kenntnis der SKT-Spalte konservativ nicht bewertet —
+ * Fertigkeiten werden ohne Kenntnis der SKT-Spalte konservativ nicht bewertet -
  * dafür sind die `apCost`-Angaben an den Einträgen bzw. `costs`-Callbacks gedacht.
  */
 export function apBreakdown(
@@ -158,10 +183,15 @@ export function apBreakdown(
     specialAbilities: sumOwned(character.specialAbilities),
     talents: sumSkills(character.talents, costs.talentCost),
     combatTechniques: sumSkills(character.combatTechniques, costs.combatTechniqueCost),
-    spells: sumSkills(character.spells, costs.spellCost) + sumSkills(character.rituals, costs.spellCost),
+    // Zaubertricks und Segnungen kosten pauschal 1 AP je Eintrag
+    spells:
+      sumSkills(character.spells, costs.spellCost) +
+      sumSkills(character.rituals, costs.spellCost) +
+      character.cantrips.length,
     liturgies:
       sumSkills(character.liturgies, costs.liturgyCost) +
-      sumSkills(character.ceremonies, costs.liturgyCost),
+      sumSkills(character.ceremonies, costs.liturgyCost) +
+      character.blessings.length,
   };
   const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
   return { ...breakdown, total, remaining: character.apTotal - total };

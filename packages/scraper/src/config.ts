@@ -26,7 +26,7 @@ export const GLOBAL_EXCLUDE: RegExp[] = [
 
 /**
  * Detailseiten-Endpunkte, die genau einer Kategorie gehören. Andere Kategorien
- * folgen solchen Links nicht — Professionsseiten verlinken z. B. ihre typischen
+ * folgen solchen Links nicht - Professionsseiten verlinken z. B. ihre typischen
  * Zauber, die sonst als Professions-Einträge landen würden.
  */
 export const QUERY_ENDPOINT_OWNER: Record<string, string> = {
@@ -114,7 +114,13 @@ export const CATEGORIES: CategoryConfig[] = [
   { key: "zauber", roots: ["zauberauswahl.html"], crawlNav: false },
   { key: "rituale", roots: ["ritualauswahl.html"], crawlNav: false },
   { key: "zaubertricks", roots: ["zaubertrickauswahl.html"], crawlNav: false },
-  { key: "magie", roots: ["magie.html"], crawlNav: true, exclude: AUSWAHL_MAGIE },
+  {
+    key: "magie",
+    // Die Traditions-Auswahl ist nirgends in einer Unternavigation verlinkt
+    roots: ["magie.html", "magische_traditionauswahl.html"],
+    crawlNav: true,
+    exclude: AUSWAHL_MAGIE,
+  },
   { key: "liturgien", roots: ["liturgieauswahl.html"], crawlNav: false },
   { key: "zeremonien", roots: ["zeremonieauswahl.html"], crawlNav: false },
   { key: "segen", roots: ["segenauswahl.html"], crawlNav: false },
@@ -129,6 +135,7 @@ export const CATEGORIES: CategoryConfig[] = [
       "GR_Segen-Regeln.html",
       "RE_Aufbau-Liturgie-Zeremoniebeschreibung.html",
       "RE_Begabungen-durch-Liturgien.html",
+      "karmale_traditionauswahl.html",
     ],
     crawlNav: true,
     exclude: AUSWAHL_GOETTER,

@@ -26,7 +26,7 @@ export class Fetcher {
 
   constructor(private readonly opts: FetcherOptions) {}
 
-  async get(url: string): Promise<FetchResult> {
+  async get(url: string, signal?: AbortSignal): Promise<FetchResult> {
     if (!this.opts.force) {
       const cached = await this.opts.cache.get(url);
       if (cached && cached.status === 200) {
@@ -45,10 +45,14 @@ export class Fetcher {
       this.lastRequestAt = Date.now();
 
       try {
+        // Timeout und (optionaler) Abbruch-Signal des Scrape-Laufs kombinieren,
+        // damit ein laufender Download beim Abbrechen sofort endet.
+        const timeout = AbortSignal.timeout(30_000);
+        const combined = signal ? AbortSignal.any([timeout, signal]) : timeout;
         const response = await fetch(url, {
           headers: { "User-Agent": USER_AGENT, "Accept-Language": "de" },
           redirect: "follow",
-          signal: AbortSignal.timeout(30_000),
+          signal: combined,
         });
         if (response.status === 200) {
           const html = await response.text();
@@ -57,10 +61,12 @@ export class Fetcher {
           return { url, html, fromCache: false };
         }
         lastError = new Error(`HTTP ${response.status}`);
-        // 4xx nicht wiederholen — die Seite existiert schlicht nicht
+        // 4xx nicht wiederholen - die Seite existiert schlicht nicht
         if (response.status >= 400 && response.status < 500) break;
       } catch (error) {
         lastError = error;
+        // Vom Nutzer abgebrochen: nicht erneut versuchen
+        if (signal?.aborted) break;
       }
       await sleep(1000 * 2 ** attempt);
     }
