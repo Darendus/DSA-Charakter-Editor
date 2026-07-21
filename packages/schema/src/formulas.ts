@@ -82,6 +82,13 @@ export interface SpeciesBaseValues {
 /** Basiswerte für Menschen als Fallback, solange keine Spezies gewählt ist. */
 export const HUMAN_BASE: SpeciesBaseValues = { lpBase: 5, spiBase: -5, touBase: -5, movBase: 8 };
 
+/**
+ * Homebrew: Spezies/Rasse beeinflusst die abgeleiteten Werte nicht.
+ * LeP/SK/ZK werden rein aus Attributen berechnet; GS nutzt den neutralen
+ * Standardwert 8 (GS hat keinen Attributsanteil).
+ */
+export const HOMEBREW_BASE: SpeciesBaseValues = { lpBase: 0, spiBase: 0, touBase: 0, movBase: 8 };
+
 export interface DerivedValues {
   /** Lebensenergie */
   lp: number;
@@ -127,6 +134,36 @@ export function derivedValues(
     mov: species.movBase,
     fatePoints: 3,
   };
+}
+
+// ---------------------------------------------------------------------------
+// FP-Buchhaltung (Homebrew): 1 FP = 1 Talentpunkt
+// ---------------------------------------------------------------------------
+
+/** Homebrew-Grundwert jedes Talents: alle Talente starten bei -2 (kostet 0 FP). */
+export const HOMEBREW_TALENT_BASE = -2;
+
+/**
+ * Auf Talente ausgegebene FP: jeder Punkt über der Homebrew-Basis (-2) kostet 1 FP;
+ * die Basis selbst ist frei. Nicht gespeicherte Talente stehen auf der Basis (0 FP).
+ */
+export function talentFpSpent(talents: { value: number }[]): number {
+  return talents.reduce((sum, t) => sum + (t.value - HOMEBREW_TALENT_BASE), 0);
+}
+
+export interface FpBudget {
+  /** Anfangs-FP + erhaltene FP */
+  total: number;
+  /** auf Talente ausgegeben */
+  spent: number;
+  /** verfügbar */
+  remaining: number;
+}
+
+export function fpBudget(character: Character): FpBudget {
+  const total = character.fpInitial + character.fpEarned;
+  const spent = talentFpSpent(character.talents);
+  return { total, spent, remaining: total - spent };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import type { EquipmentEntry } from "@dsa/schema";
+import { customId } from "../customId";
 import { useCharacterStore, useDataStore } from "../store";
 import { EntitySearchPicker } from "./EntitySearchPicker";
+import { ManualEntryForm } from "./ManualEntryForm";
 
 /** "0,5 Stn" / "1 Stein" / "10 Stein" → Gewicht in Stein; sonst undefined */
 function parseWeight(raw: string | undefined): number | undefined {
@@ -21,7 +24,6 @@ export function BesitzTab() {
   const { current, update } = useCharacterStore();
   const loadCategory = useDataStore((s) => s.loadCategory);
   const findEntry = useDataStore((s) => s.findEntry);
-  const [customName, setCustomName] = useState("");
 
   useEffect(() => {
     loadCategory("ruestkammer").catch(() => {
@@ -30,6 +32,10 @@ export function BesitzTab() {
   }, [loadCategory]);
 
   if (!current) return null;
+
+  /** Stat-Felder eines Gegenstands: eigene aus dem Eintrag, sonst aus den Regeldaten. */
+  const statsOf = (item: EquipmentEntry): Record<string, string> =>
+    item.custom ? (item.fields ?? {}) : item.id ? (findEntry("ruestkammer", item.id)?.fields ?? {}) : {};
 
   const setCount = (index: number, count: number) => {
     update((c) => ({
@@ -40,16 +46,21 @@ export function BesitzTab() {
     }));
   };
 
-  const addCustom = () => {
-    const name = customName.trim();
-    if (!name) return;
-    update((c) => ({ ...c, equipment: [...c.equipment, { name, count: 1 }] }));
-    setCustomName("");
+  const addItem = (name: string, fields: Record<string, string>) => {
+    const hasFields = Object.keys(fields).length > 0;
+    update((c) => ({
+      ...c,
+      equipment: [
+        ...c.equipment,
+        hasFields
+          ? { id: customId(), name, count: 1, custom: true, fields }
+          : { name, count: 1 },
+      ],
+    }));
   };
 
   const totalWeight = current.equipment.reduce((sum, item) => {
-    if (!item.id) return sum;
-    const weight = parseWeight(findEntry("ruestkammer", item.id)?.fields["Gewicht"]);
+    const weight = parseWeight(statsOf(item)["Gewicht"]);
     return sum + (weight ?? 0) * item.count;
   }, 0);
 
@@ -57,27 +68,28 @@ export function BesitzTab() {
     <div className="besitz">
       <section>
         <h2>Ausrüstung</h2>
-        <div className="besitz-add">
-          <EntitySearchPicker
-            category="ruestkammer"
-            placeholder="Gegenstand aus der Rüstkammer …"
-            onPick={(entry) =>
-              update((c) => ({
-                ...c,
-                equipment: [...c.equipment, { id: entry.id, name: entry.name, count: 1 }],
-              }))
-            }
-          />
-          <div className="custom-add">
-            <input
-              placeholder="Eigener Gegenstand …"
-              value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCustom()}
-            />
-            <button onClick={addCustom}>Hinzufügen</button>
-          </div>
-        </div>
+        <EntitySearchPicker
+          category="ruestkammer"
+          placeholder="Gegenstand aus der Rüstkammer …"
+          onPick={(entry) =>
+            update((c) => ({
+              ...c,
+              equipment: [...c.equipment, { id: entry.id, name: entry.name, count: 1 }],
+            }))
+          }
+        />
+        <ManualEntryForm
+          legend="Eigener Gegenstand"
+          fields={
+            current.useAp
+              ? []
+              : [
+                  { key: "Gewicht", label: "Gewicht", placeholder: "Gewicht (z. B. 1 Stein)" },
+                  { key: "Preis", label: "Preis", placeholder: "Preis (z. B. 10 S)" },
+                ]
+          }
+          onAdd={addItem}
+        />
 
         {current.equipment.length > 0 && (
           <table className="table">
@@ -93,10 +105,13 @@ export function BesitzTab() {
             </thead>
             <tbody>
               {current.equipment.map((item, index) => {
-                const entry = item.id ? findEntry("ruestkammer", item.id) : undefined;
+                const f = statsOf(item);
                 return (
                   <tr key={`${item.id ?? item.name}-${index}`}>
-                    <td>{item.name}</td>
+                    <td>
+                      {item.name}
+                      {item.custom && <span className="muted small"> (eigen)</span>}
+                    </td>
                     <td className="stepper">
                       <button onClick={() => setCount(index, item.count - 1)} disabled={item.count <= 1}>
                         −
@@ -104,8 +119,8 @@ export function BesitzTab() {
                       <span className="value">{item.count}</span>
                       <button onClick={() => setCount(index, item.count + 1)}>+</button>
                     </td>
-                    <td className="muted">{entry?.fields["Gewicht"] ?? ""}</td>
-                    <td className="muted">{entry?.fields["Preis"] ?? ""}</td>
+                    <td className="muted">{f["Gewicht"] ?? ""}</td>
+                    <td className="muted">{f["Preis"] ?? ""}</td>
                     <td>
                       <input
                         value={item.notes ?? ""}

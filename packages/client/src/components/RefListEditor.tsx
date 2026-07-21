@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { EntityRef } from "@dsa/schema";
+import { customId } from "../customId";
 import { useCharacterStore } from "../store";
 import { useApBudget } from "../useApBudget";
 import { EntitySearchPicker } from "./EntitySearchPicker";
+import { ManualEntryForm } from "./ManualEntryForm";
 
 interface Props {
   title: string;
@@ -42,12 +44,25 @@ export function RefListEditor({ title, category, values, onChange, apEach = 1 }:
           );
         }}
       />
+      {!useAp && (
+        <ManualEntryForm
+          legend={`Eigene(n) ${title} anlegen`}
+          onAdd={(name) =>
+            onChange(
+              [...values, { id: customId(), name, custom: true }].sort((a, b) =>
+                a.name.localeCompare(b.name, "de")
+              )
+            )
+          }
+        />
+      )}
       {addError && <p className="error small">{addError}</p>}
       {values.length > 0 && (
         <ul className="chip-list">
           {values.map((ref) => (
             <li key={ref.id} className="chip">
               {ref.name}
+              {ref.custom && <span className="muted small"> (eigen)</span>}
               <button className="danger" onClick={() => onChange(values.filter((v) => v.id !== ref.id))}>
                 ×
               </button>

@@ -3,12 +3,14 @@ import {
   activationCost,
   improvementCost,
   improvementCostRange,
-  type EntityBase,
+  type ImprovementColumn,
   type SkillValue,
 } from "@dsa/schema";
+import { customId } from "../customId";
 import { useCharacterStore, useDataStore } from "../store";
 import { columnOf, useApBudget } from "../useApBudget";
 import { EntitySearchPicker } from "./EntitySearchPicker";
+import { ManualEntryForm } from "./ManualEntryForm";
 
 interface Props {
   title: string;
@@ -43,15 +45,46 @@ export function SkillListEditor({
 
   const affordable = (cost: number) => !useAp || budget.remaining >= cost;
 
-  const setValue = (id: string, name: string, value: number) => {
+  /** Steigerungsspalte: bei eigenen Einträgen aus dem Eintrag selbst, sonst aus den Regeldaten. */
+  const columnFor = (skill: SkillValue): ImprovementColumn =>
+    skill.custom ? (skill.improvementColumn ?? "A") : columnOf(findEntry(category, skill.id));
+
+  const checkFor = (skill: SkillValue): string => {
+    if (skill.custom) return skill.check ?? "";
+    const entry = findEntry(category, skill.id);
+    return (
+      (entry as { check?: string[] } | undefined)?.check?.join("/") ?? entry?.fields["Probe"] ?? ""
+    );
+  };
+
+  /** FW ändern, ohne die Zusatzfelder eigener Einträge zu verlieren. */
+  const setValue = (skill: SkillValue, value: number) => {
     const clamped = Math.max(0, Math.min(maxValue, value));
-    onChange([...values.filter((v) => v.id !== id), { id, name, value: clamped }].sort((a, b) =>
-      a.name.localeCompare(b.name, "de")
-    ));
+    onChange(
+      [...values.filter((v) => v.id !== skill.id), { ...skill, value: clamped }].sort((a, b) =>
+        a.name.localeCompare(b.name, "de")
+      )
+    );
+  };
+
+  const addCustom = (name: string, fields: Record<string, string>) => {
+    onChange(
+      [
+        ...values,
+        {
+          id: customId(),
+          name,
+          value: 0,
+          custom: true,
+          check: fields["Probe"],
+          improvementColumn: (fields["Steigerungsfaktor"] as ImprovementColumn) || undefined,
+        },
+      ].sort((a, b) => a.name.localeCompare(b.name, "de"))
+    );
   };
 
   const apOf = (skill: SkillValue) => {
-    const column = columnOf(findEntry(category, skill.id));
+    const column = columnFor(skill);
     return (
       improvementCostRange(column, 0, skill.value) + (includeActivation ? activationCost(column) : 0)
     );
@@ -72,9 +105,19 @@ export function SkillListEditor({
             return;
           }
           setAddError(undefined);
-          setValue(entry.id, entry.name, 0);
+          setValue({ id: entry.id, name: entry.name, value: 0 }, 0);
         }}
       />
+      {!useAp && (
+        <ManualEntryForm
+          legend={`Eigene(n) ${title} anlegen`}
+          fields={[
+            { key: "Probe", label: "Probe", placeholder: "z. B. MU/KL/CH" },
+            { key: "Steigerungsfaktor", label: "Sf.", options: ["A", "B", "C", "D"] },
+          ]}
+          onAdd={addCustom}
+        />
+      )}
       {addError && <p className="error small">{addError}</p>}
       {values.length > 0 && (
         <table className="table">
@@ -90,32 +133,28 @@ export function SkillListEditor({
           </thead>
           <tbody>
             {values.map((skill) => {
-              const entry = findEntry(category, skill.id);
-              const check =
-                (entry as { check?: string[] } | undefined)?.check?.join("/") ??
-                entry?.fields["Probe"] ??
-                "";
+              const column = columnFor(skill);
               return (
                 <tr key={skill.id}>
-                  <td>{skill.name}</td>
-                  <td className="muted">{check}</td>
-                  <td className="muted">{columnOf(entry)}</td>
+                  <td>
+                    {skill.name}
+                    {skill.custom && <span className="muted small"> (eigen)</span>}
+                  </td>
+                  <td className="muted">{checkFor(skill)}</td>
+                  <td className="muted">{column}</td>
                   <td className="stepper">
-                    <button
-                      onClick={() => setValue(skill.id, skill.name, skill.value - 1)}
-                      disabled={skill.value <= 0}
-                    >
+                    <button onClick={() => setValue(skill, skill.value - 1)} disabled={skill.value <= 0}>
                       −
                     </button>
                     <span className="value">{skill.value}</span>
                     <button
-                      onClick={() => setValue(skill.id, skill.name, skill.value + 1)}
+                      onClick={() => setValue(skill, skill.value + 1)}
                       disabled={
                         skill.value >= maxValue ||
-                        !affordable(improvementCost(columnOf(entry), skill.value + 1))
+                        !affordable(improvementCost(column, skill.value + 1))
                       }
                       title={
-                        !affordable(improvementCost(columnOf(entry), skill.value + 1))
+                        !affordable(improvementCost(column, skill.value + 1))
                           ? "Nicht genug AP"
                           : undefined
                       }

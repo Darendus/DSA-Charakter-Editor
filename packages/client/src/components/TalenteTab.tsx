@@ -1,4 +1,5 @@
 import {
+  fpBudget,
   improvementCost,
   improvementCostRange,
   type EntityBase,
@@ -28,18 +29,34 @@ export function TalenteTab() {
     );
   }
 
-  const valueOf = (id: string) => current.talents.find((t) => t.id === id)?.value ?? 0;
+  // Homebrew: alle Talente starten bei -2 (Basiswert); im AP-Modus bei 0.
+  const baseline = current.useAp ? 0 : -2;
+  const minValue = baseline;
+  // FP-Budget nur im Homebrew relevant (1 FP = 1 Talentpunkt über -2)
+  const fp = fpBudget(current);
+
+  const valueOf = (id: string) => current.talents.find((t) => t.id === id)?.value ?? baseline;
 
   const setValue = (talent: TalentEntry, value: number) => {
-    const clamped = Math.max(0, Math.min(20, value));
+    const clamped = Math.max(minValue, Math.min(20, value));
     update((c) => {
       const rest = c.talents.filter((t) => t.id !== talent.id);
+      // Nur Abweichungen vom Basiswert speichern
       return {
         ...c,
         talents:
-          clamped > 0 ? [...rest, { id: talent.id, name: talent.name, value: clamped }] : rest,
+          clamped !== baseline
+            ? [...rest, { id: talent.id, name: talent.name, value: clamped }]
+            : rest,
       };
     });
+  };
+
+  /** Darf um +1 gesteigert werden? Homebrew: nur solange FP übrig sind. */
+  const canRaise = (value: number, column: ImprovementColumn) => {
+    if (value >= 20) return false;
+    if (current.useAp) return canAfford(current, budget, improvementCost(column, value + 1));
+    return fp.remaining >= 1;
   };
 
   // Nach Talentkategorie gruppieren (Körper-, Gesellschafts-, Natur-, Wissens-, Handwerkstalente)
@@ -75,19 +92,21 @@ export function TalenteTab() {
                     <td className="muted">{talent.check?.join("/") ?? talent.fields["Probe"] ?? ""}</td>
                     <td className="muted">{column}</td>
                     <td className="stepper">
-                      <button onClick={() => setValue(talent, value - 1)} disabled={value <= 0}>
+                      <button
+                        onClick={() => setValue(talent, value - 1)}
+                        disabled={value <= minValue}
+                      >
                         −
                       </button>
                       <span className="value">{value}</span>
                       <button
                         onClick={() => setValue(talent, value + 1)}
-                        disabled={
-                          value >= 20 ||
-                          !canAfford(current, budget, improvementCost(column, value + 1))
-                        }
+                        disabled={!canRaise(value, column)}
                         title={
-                          !canAfford(current, budget, improvementCost(column, value + 1))
-                            ? "Nicht genug AP"
+                          !canRaise(value, column)
+                            ? current.useAp
+                              ? "Nicht genug AP"
+                              : "Keine FP übrig"
                             : undefined
                         }
                       >

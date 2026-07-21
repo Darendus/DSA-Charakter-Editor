@@ -338,6 +338,13 @@ textarea:focus {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
+.picker-results li {
+  /* Nicht sichtbare Treffer werden nicht gerendert — hält große Listen (946
+     Rüstkammer-Einträge) beim Öffnen/Tippen flüssig, zeigt aber alle Optionen. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 2.2rem;
+}
+
 .picker-results button {
   width: 100%;
   text-align: left;
@@ -354,6 +361,31 @@ textarea:focus {
 .picker-results button:hover {
   background: var(--accent);
   color: var(--accent-ink);
+}
+
+/* Manuelle Homebrew-Einträge */
+.manual-entry {
+  margin: 0.4rem 0 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.manual-legend {
+  font-style: italic;
+}
+
+.manual-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.manual-fields input,
+.manual-fields select {
+  min-width: 8rem;
+  flex: 1 1 8rem;
+  max-width: 16rem;
 }
 
 /* Zaubertricks/Segnungen */
@@ -404,18 +436,6 @@ textarea:focus {
 }
 
 /* Besitz */
-.besitz-add {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  align-items: flex-start;
-}
-
-.custom-add {
-  display: flex;
-  gap: 0.4rem;
-}
-
 .money-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

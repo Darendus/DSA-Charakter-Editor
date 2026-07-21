@@ -1,6 +1,7 @@
 import { ATTRIBUTE_LABELS, AttributeIds, attributeIdFromName, type AttributeId } from "@dsa/schema";
-import { useDataStore } from "../store";
+import { useCharacterStore, useDataStore } from "../store";
 import { EntitySearchPicker } from "./EntitySearchPicker";
+import { ManualEntryForm } from "./ManualEntryForm";
 
 interface Tradition {
   name: string;
@@ -28,6 +29,7 @@ export function TraditionSection({
 }: Props) {
   const categories = useDataStore((s) => s.categories);
   void categories;
+  const useAp = useCharacterStore((s) => s.current?.useAp ?? true);
 
   return (
     <section className="tradition">
@@ -62,17 +64,38 @@ export function TraditionSection({
           </button>
         </div>
       ) : (
-        <EntitySearchPicker
-          category={category}
-          placeholder="Tradition wählen …"
-          filter={(entry) => Boolean(entry.fields["Leiteigenschaft"])}
-          onPick={(entry) =>
-            onChange({
-              name: entry.name,
-              primaryAttribute: attributeIdFromName(entry.fields["Leiteigenschaft"] ?? ""),
-            })
-          }
-        />
+        <>
+          <EntitySearchPicker
+            category={category}
+            placeholder="Tradition wählen …"
+            filter={(entry) => Boolean(entry.fields["Leiteigenschaft"])}
+            onPick={(entry) =>
+              onChange({
+                name: entry.name,
+                primaryAttribute: attributeIdFromName(entry.fields["Leiteigenschaft"] ?? ""),
+              })
+            }
+          />
+          {!useAp && (
+            <ManualEntryForm
+              legend="Eigene Tradition anlegen"
+              fields={[
+                {
+                  key: "Leiteigenschaft",
+                  label: "Leiteigenschaft",
+                  options: [...AttributeIds],
+                },
+              ]}
+              addLabel="Anlegen"
+              onAdd={(name, values) =>
+                onChange({
+                  name,
+                  primaryAttribute: (values["Leiteigenschaft"] as AttributeId) || undefined,
+                })
+              }
+            />
+          )}
+        </>
       )}
     </section>
   );

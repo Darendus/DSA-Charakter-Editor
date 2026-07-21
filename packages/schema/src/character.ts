@@ -1,10 +1,15 @@
 import { z } from "zod";
-import { AttributeIdSchema } from "./entities";
+import { AttributeIdSchema, ImprovementColumnSchema } from "./entities";
+
+/** Freie Stat-Felder für manuell angelegte Einträge (gleiche Form wie EntityBase.fields) */
+export const CustomFieldsSchema = z.record(z.string(), z.string());
 
 /** Referenz auf einen gescrapten Eintrag (per id), Name redundant für Anzeige ohne Datenlookup. */
 export const EntityRefSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** Manuell angelegt (Homebrew) — keine Regeldaten hinterlegt */
+  custom: z.boolean().optional(),
 });
 export type EntityRef = z.infer<typeof EntityRefSchema>;
 
@@ -19,14 +24,27 @@ export type OwnedAbility = z.infer<typeof OwnedAbilitySchema>;
 
 export const SkillValueSchema = EntityRefSchema.extend({
   value: z.number().int().min(0),
+  /** Eigene Probe (nur bei custom), z. B. "MU/KL/CH" */
+  check: z.string().optional(),
+  /** Eigene Steigerungsspalte (nur bei custom) */
+  improvementColumn: ImprovementColumnSchema.optional(),
 });
 export type SkillValue = z.infer<typeof SkillValueSchema>;
+
+/** Talente dürfen im Homebrew bis -2; sonst identisch zu SkillValue. */
+export const TalentValueSchema = SkillValueSchema.extend({
+  value: z.number().int().min(-2),
+});
+export type TalentValue = z.infer<typeof TalentValueSchema>;
 
 export const EquipmentEntrySchema = z.object({
   name: z.string(),
   id: z.string().optional(),
   count: z.number().int().min(1).default(1),
   notes: z.string().optional(),
+  custom: z.boolean().optional(),
+  /** Freie Stat-Werte (nur bei custom): Gewicht, Preis */
+  fields: CustomFieldsSchema.optional(),
 });
 export type EquipmentEntry = z.infer<typeof EquipmentEntrySchema>;
 
@@ -35,12 +53,18 @@ export const WeaponEntrySchema = z.object({
   id: z.string(),
   name: z.string(),
   combatTechniqueId: z.string().optional(),
+  custom: z.boolean().optional(),
+  /** Freie Stat-Werte (nur bei custom): TP, RW, "AT/PA-Mod" */
+  fields: CustomFieldsSchema.optional(),
 });
 export type WeaponEntry = z.infer<typeof WeaponEntrySchema>;
 
 export const ArmorEntrySchema = z.object({
   id: z.string(),
   name: z.string(),
+  custom: z.boolean().optional(),
+  /** Freie Stat-Werte (nur bei custom): Rüstungsschutz, Belastungsstufe */
+  fields: CustomFieldsSchema.optional(),
 });
 export type ArmorEntry = z.infer<typeof ArmorEntrySchema>;
 
@@ -71,6 +95,13 @@ export const CharacterSchema = z.object({
   /** Gesamtbudget an Abenteuerpunkten (Standard-Erfahrungsgrad "Erfahren" = 1100) */
   apTotal: z.number().int().default(1100),
 
+  /**
+   * Homebrew-Fertigkeitspunkte (nur relevant bei useAp === false).
+   * Ausgebbar auf Talente (1 FP = 1 Talentpunkt). Gesamt = Anfang + erhalten.
+   */
+  fpInitial: z.number().int().default(0),
+  fpEarned: z.number().int().default(0),
+
   attributes: AttributesSchema.default({}),
 
   species: EntityRefSchema.optional(),
@@ -81,8 +112,8 @@ export const CharacterSchema = z.object({
   disadvantages: z.array(OwnedAbilitySchema).default([]),
   specialAbilities: z.array(OwnedAbilitySchema).default([]),
 
-  /** Talentwerte (nur abweichend von 0 gespeichert) */
-  talents: z.array(SkillValueSchema).default([]),
+  /** Talentwerte (nur abweichend von 0 gespeichert; Homebrew erlaubt bis -2) */
+  talents: z.array(TalentValueSchema).default([]),
   /** Kampftechnikwerte (nur abweichend vom Basiswert 6 gespeichert) */
   combatTechniques: z.array(SkillValueSchema).default([]),
 

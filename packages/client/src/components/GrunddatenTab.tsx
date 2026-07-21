@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { EntityBase } from "@dsa/schema";
+import { fpBudget, type EntityBase } from "@dsa/schema";
 import { useCharacterStore, useDataStore } from "../store";
 import { useApBudget } from "../useApBudget";
 
@@ -57,9 +57,11 @@ export function GrunddatenTab() {
   const { current, update } = useCharacterStore();
   const budget = useApBudget(current);
   const [apToAdd, setApToAdd] = useState("");
+  const [fpToAdd, setFpToAdd] = useState("");
   if (!current) return null;
 
   const remaining = current.useAp ? budget.remaining : undefined;
+  const fp = fpBudget(current);
 
   const addAp = () => {
     const amount = parseInt(apToAdd, 10);
@@ -68,6 +70,13 @@ export function GrunddatenTab() {
     const newTotal = Math.max(budget.total, Math.max(0, current.apTotal + amount));
     update({ apTotal: newTotal });
     setApToAdd("");
+  };
+
+  const addFp = () => {
+    const amount = parseInt(fpToAdd, 10);
+    if (!amount) return;
+    update({ fpEarned: current.fpEarned + amount });
+    setFpToAdd("");
   };
 
   return (
@@ -117,6 +126,53 @@ export function GrunddatenTab() {
                 onKeyDown={(e) => e.key === "Enter" && addAp()}
               />
               <button onClick={addAp} disabled={!parseInt(apToAdd, 10)}>
+                Hinzufügen
+              </button>
+            </div>
+          </label>
+        </>
+      )}
+
+      {!current.useAp && (
+        <>
+          <label className="field">
+            <span>Anfangs-FP (Fertigkeitspunkte)</span>
+            <input
+              type="number"
+              value={current.fpInitial}
+              onChange={(e) => update({ fpInitial: Math.trunc(Number(e.target.value) || 0) })}
+            />
+          </label>
+
+          <label className="field">
+            <span>Erhaltene FP</span>
+            <div className="ap-total">
+              <strong>{current.fpEarned} FP</strong>
+              <span className={fp.remaining < 0 ? "error small" : "muted small"}>
+                gesamt: {fp.total} · Talente: {fp.spent} · verfügbar: {fp.remaining}
+              </span>
+              {fp.remaining < 0 && (
+                <button
+                  title="Anfangs-FP so anheben, dass die bereits ausgegebenen Talent-FP gedeckt sind (verfügbar = 0)"
+                  onClick={() => update({ fpInitial: current.fpInitial - fp.remaining })}
+                >
+                  Auf Talente angleichen (+{-fp.remaining})
+                </button>
+              )}
+            </div>
+          </label>
+
+          <label className="field">
+            <span>FP hinzufügen (erhaltene FP)</span>
+            <div className="ap-add">
+              <input
+                type="number"
+                placeholder="z. B. 20"
+                value={fpToAdd}
+                onChange={(e) => setFpToAdd(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addFp()}
+              />
+              <button onClick={addFp} disabled={!parseInt(fpToAdd, 10)}>
                 Hinzufügen
               </button>
             </div>

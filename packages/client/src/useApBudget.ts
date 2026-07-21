@@ -6,6 +6,7 @@ import {
   type ApBreakdown,
   type Character,
   type ImprovementColumn,
+  type SkillValue,
 } from "@dsa/schema";
 import { useDataStore } from "./store";
 
@@ -53,11 +54,17 @@ export function useApBudget(character: Character | undefined): ApBreakdown {
     (id: string, value: number): number =>
       improvementCostRange(columnOf(findEntry(category, id) as never), 0, value);
 
+  /** Spalte eigener Fertigkeiten aus dem Eintrag selbst, sonst aus den Regeldaten. */
+  const columnFor = (own: SkillValue[], cats: string[], id: string): ImprovementColumn => {
+    const custom = own.find((s) => s.id === id && s.custom);
+    if (custom) return custom.improvementColumn ?? "A";
+    return columnOf(cats.map((cat) => findEntry(cat, id)).find(Boolean) as never);
+  };
+
   const castableCost =
-    (...cats: string[]) =>
+    (own: SkillValue[], ...cats: string[]) =>
     (id: string, value: number): number => {
-      const entry = cats.map((cat) => findEntry(cat, id)).find(Boolean);
-      const column = columnOf(entry as never);
+      const column = columnFor(own, cats, id);
       return activationCost(column) + improvementCostRange(column, 0, value);
     };
 
@@ -72,8 +79,12 @@ export function useApBudget(character: Character | undefined): ApBreakdown {
         COMBAT_TECHNIQUE_START,
         value
       ),
-    spellCost: castableCost("zauber", "rituale"),
-    liturgyCost: castableCost("liturgien", "zeremonien"),
+    spellCost: castableCost([...character.spells, ...character.rituals], "zauber", "rituale"),
+    liturgyCost: castableCost(
+      [...character.liturgies, ...character.ceremonies],
+      "liturgien",
+      "zeremonien"
+    ),
   });
 }
 

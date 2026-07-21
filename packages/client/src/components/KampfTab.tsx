@@ -10,9 +10,11 @@ import {
   type EntityBase,
   type ImprovementColumn,
 } from "@dsa/schema";
+import { customId } from "../customId";
 import { useCharacterStore, useDataStore } from "../store";
 import { canAfford, useApBudget } from "../useApBudget";
 import { EntitySearchPicker } from "./EntitySearchPicker";
+import { ManualEntryForm } from "./ManualEntryForm";
 
 type TechniqueEntry = EntityBase & {
   improvementColumn?: ImprovementColumn;
@@ -35,6 +37,11 @@ export function KampfTab() {
     | undefined;
   const findEntry = useDataStore((s) => s.findEntry);
   const budget = useApBudget(current);
+
+  // Stat-Werte einer Waffe/Rüstung: bei eigenen Einträgen aus dem Eintrag,
+  // sonst aus den Rüstkammer-Regeldaten.
+  const statsOf = (item: { custom?: boolean; id: string; fields?: Record<string, string> }) =>
+    item.custom ? (item.fields ?? {}) : (findEntry("ruestkammer", item.id)?.fields ?? {});
 
   useEffect(() => {
     for (const key of ["kampftechniken", "ruestkammer"]) {
@@ -161,6 +168,23 @@ export function KampfTab() {
             update((c) => ({ ...c, weapons: [...c.weapons, { id: entry.id, name: entry.name }] }))
           }
         />
+        {!current.useAp && (
+          <ManualEntryForm
+            legend="Eigene Waffe anlegen"
+            fields={[
+              { key: "TP", label: "TP", placeholder: "TP (z. B. 1W6+4)" },
+              { key: "RW", label: "RW", placeholder: "RW (z. B. kurz)" },
+              { key: "AT/PA-Mod", label: "AT/PA", placeholder: "AT/PA-Mod (z. B. -1/-1)" },
+            ]}
+            addLabel="Waffe anlegen"
+            onAdd={(name, fields) =>
+              update((c) => ({
+                ...c,
+                weapons: [...c.weapons, { id: customId(), name, custom: true, fields }],
+              }))
+            }
+          />
+        )}
         {current.weapons.length > 0 && (
           <table className="table">
             <thead>
@@ -176,7 +200,7 @@ export function KampfTab() {
             </thead>
             <tbody>
               {current.weapons.map((weapon) => {
-                const item = findEntry("ruestkammer", weapon.id);
+                const wf = statsOf(weapon);
                 const technique = weapon.combatTechniqueId
                   ? (techniques.find((t) => t.id === weapon.combatTechniqueId) as
                       | TechniqueEntry
@@ -184,10 +208,13 @@ export function KampfTab() {
                   : undefined;
                 const ktw = technique ? ktwOf(technique.id) : 0;
                 const base = combatValues(technique, ktw);
-                const [atMod, paMod] = parseAtPaMod(item?.fields["AT/PA-Mod"]);
+                const [atMod, paMod] = parseAtPaMod(wf["AT/PA-Mod"]);
                 return (
                   <tr key={weapon.id}>
-                    <td>{weapon.name}</td>
+                    <td>
+                      {weapon.name}
+                      {weapon.custom && <span className="muted small"> (eigen)</span>}
+                    </td>
                     <td>
                       <select
                         value={weapon.combatTechniqueId ?? ""}
@@ -210,8 +237,8 @@ export function KampfTab() {
                         ))}
                       </select>
                     </td>
-                    <td>{item?.fields["TP"] ?? "?"}</td>
-                    <td className="muted">{item?.fields["RW"] ?? item?.fields["Reichweite"] ?? ""}</td>
+                    <td>{wf["TP"] ?? "?"}</td>
+                    <td className="muted">{wf["RW"] ?? wf["Reichweite"] ?? ""}</td>
                     <td>{base.at !== undefined ? base.at + atMod : "–"}</td>
                     <td>
                       {technique && !isRanged(technique) && base.pa !== undefined
@@ -250,6 +277,22 @@ export function KampfTab() {
             update((c) => ({ ...c, armor: [...c.armor, { id: entry.id, name: entry.name }] }))
           }
         />
+        {!current.useAp && (
+          <ManualEntryForm
+            legend="Eigene Rüstung anlegen"
+            fields={[
+              { key: "Rüstungsschutz", label: "RS", placeholder: "RS (z. B. 4)", numeric: true },
+              { key: "Belastungsstufe", label: "BE", placeholder: "BE (z. B. 2)", numeric: true },
+            ]}
+            addLabel="Rüstung anlegen"
+            onAdd={(name, fields) =>
+              update((c) => ({
+                ...c,
+                armor: [...c.armor, { id: customId(), name, custom: true, fields }],
+              }))
+            }
+          />
+        )}
         {current.armor.length > 0 && (
           <table className="table">
             <thead>
@@ -262,12 +305,15 @@ export function KampfTab() {
             </thead>
             <tbody>
               {current.armor.map((piece) => {
-                const item = findEntry("ruestkammer", piece.id);
+                const af = statsOf(piece);
                 return (
                   <tr key={piece.id}>
-                    <td>{piece.name}</td>
-                    <td>{item?.fields["Rüstungsschutz"] ?? "?"}</td>
-                    <td>{item?.fields["Belastungsstufe"] ?? "?"}</td>
+                    <td>
+                      {piece.name}
+                      {piece.custom && <span className="muted small"> (eigen)</span>}
+                    </td>
+                    <td>{af["Rüstungsschutz"] ?? "?"}</td>
+                    <td>{af["Belastungsstufe"] ?? "?"}</td>
                     <td>
                       <button
                         className="danger"
@@ -288,7 +334,7 @@ export function KampfTab() {
                 <td>
                   <strong>
                     {current.armor.reduce((sum, piece) => {
-                      const rs = findEntry("ruestkammer", piece.id)?.fields["Rüstungsschutz"];
+                      const rs = statsOf(piece)["Rüstungsschutz"];
                       return sum + (rs ? parseInt(rs, 10) || 0 : 0);
                     }, 0)}
                   </strong>
@@ -296,7 +342,7 @@ export function KampfTab() {
                 <td>
                   <strong>
                     {current.armor.reduce((sum, piece) => {
-                      const be = findEntry("ruestkammer", piece.id)?.fields["Belastungsstufe"];
+                      const be = statsOf(piece)["Belastungsstufe"];
                       return sum + (be ? parseInt(be, 10) || 0 : 0);
                     }, 0)}
                   </strong>

@@ -34,16 +34,19 @@ export function EntitySearchPicker({ category, placeholder, filter, excludeIds, 
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
+  // Stabiler Schlüssel, damit das Memo nicht bei jeder neuen excludeIds-Referenz neu rechnet.
+  const excludeKey = (excludeIds ?? []).join("|");
   const matches = useMemo(() => {
     if (!entries) return [];
     const q = query.trim().toLowerCase();
-    const excluded = new Set(excludeIds ?? []);
+    const excluded = new Set(excludeKey ? excludeKey.split("|") : []);
+    // Alle Treffer anzeigen (die Liste ist scrollbar + per content-visibility performant),
+    // nicht nur die ersten 12.
     return entries
       .filter((e) => !excluded.has(e.id))
       .filter((e) => !filter || filter(e))
-      .filter((e) => !q || e.name.toLowerCase().includes(q))
-      .slice(0, 12);
-  }, [entries, query, filter, excludeIds]);
+      .filter((e) => !q || e.name.toLowerCase().includes(q));
+  }, [entries, query, filter, excludeKey]);
 
   return (
     <div className="picker" ref={wrapperRef}>

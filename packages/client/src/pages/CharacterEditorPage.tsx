@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCharacterStore, useDataStore } from "../store";
 import { ApBudget } from "../components/ApBudget";
+import { FpBudget } from "../components/FpBudget";
 import { BesitzTab } from "../components/BesitzTab";
 import { EigenschaftenTab } from "../components/EigenschaftenTab";
 import { GoetterwirkenTab } from "../components/GoetterwirkenTab";
@@ -85,7 +86,7 @@ export function CharacterEditorPage() {
         </div>
       </div>
 
-      {current.useAp && <ApBudget character={current} />}
+      {current.useAp ? <ApBudget character={current} /> : <FpBudget character={current} />}
 
       <nav className="tabs">
         {TABS.map((t) => (

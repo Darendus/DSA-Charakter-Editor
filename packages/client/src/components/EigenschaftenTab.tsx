@@ -3,6 +3,7 @@ import {
   AttributeIds,
   attributeApCost,
   derivedValues,
+  HOMEBREW_BASE,
   HUMAN_BASE,
   improvementCost,
   type AttributeId,
@@ -31,12 +32,15 @@ export function EigenschaftenTab() {
   const speciesEntry = current.species
     ? (findEntry("spezies", current.species.id) as Partial<SpeciesBaseValues> | undefined)
     : undefined;
-  const base: SpeciesBaseValues = {
-    lpBase: speciesEntry?.lpBase ?? HUMAN_BASE.lpBase,
-    spiBase: speciesEntry?.spiBase ?? HUMAN_BASE.spiBase,
-    touBase: speciesEntry?.touBase ?? HUMAN_BASE.touBase,
-    movBase: speciesEntry?.movBase ?? HUMAN_BASE.movBase,
-  };
+  // Homebrew: Spezies/Rasse beeinflusst die abgeleiteten Werte nicht.
+  const base: SpeciesBaseValues = current.useAp
+    ? {
+        lpBase: speciesEntry?.lpBase ?? HUMAN_BASE.lpBase,
+        spiBase: speciesEntry?.spiBase ?? HUMAN_BASE.spiBase,
+        touBase: speciesEntry?.touBase ?? HUMAN_BASE.touBase,
+        movBase: speciesEntry?.movBase ?? HUMAN_BASE.movBase,
+      }
+    : HOMEBREW_BASE;
 
   const derived = derivedValues(current.attributes, base, {
     isSpellcaster: Boolean(current.magicTradition),
@@ -138,9 +142,14 @@ export function EigenschaftenTab() {
             <dd>{derived.fatePoints}</dd>
           </div>
         </dl>
-        {!speciesEntry && (
+        {current.useAp && !speciesEntry && (
           <p className="muted small">
             Basiswerte: Mensch (Standard) - wähle unter Grunddaten eine Spezies für korrekte Werte.
+          </p>
+        )}
+        {!current.useAp && (
+          <p className="muted small">
+            Homebrew: abgeleitete Werte ohne Spezieseinfluss (LeP = 2·KO).
           </p>
         )}
       </div>
