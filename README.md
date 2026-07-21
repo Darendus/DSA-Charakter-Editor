@@ -24,35 +24,10 @@ gescrapt; darauf aufbauend bietet die App einen Editor zum Erstellen und Verwalt
 
 ## Benutzung
 
-```bash
-npm install
-
-# 1. Regeldaten scrapen (einmalig, dauert wegen Drosselung eine Weile)
-npm run scrape
-
-#    Teilmengen / Tests:
-npm run scrape -- --category zauber --limit 10
-npm run scrape -- --category "spezies,kulturen"
-npm run scrape -- --force            # Cache ignorieren, alles neu laden
-
-# 2. App starten (Server auf :5174, Client auf :5173)
-npm run dev
-
-# oder als Desktop-App (Electron, nutzt die Repo-Daten)
-npm run desktop
-
-# portable Windows-.exe bauen -> packages/desktop/release/DSA-Charakter-Editor.exe
-npm run dist
-```
-
-Danach im Browser: **http://localhost:5173**
-
 Die .exe ist vollständig eigenständig: Sie startet den eingebetteten Server, legt ihre Daten
 unter `%APPDATA%\dsa-charakter-editor` ab und kann die Regeldaten über den Reiter
 „Regeldaten" → „Regeldaten aktualisieren" selbst scrapen.
 
-> PowerShell verschluckt das `--`-Trennzeichen von npm. Dort stattdessen direkt aufrufen:
-> `npx tsx packages/scraper/src/cli.ts --category zauber --limit 10`
 
 ## Scraper-Funktionsweise
 
@@ -85,6 +60,3 @@ Im AP-Modus ist das Budget verbindlich: Steigerungen und Käufe, die das Maximum
 sind gesperrt. Das Maximum wächst über das Feld **„AP hinzufügen"** unter Grunddaten
 (z. B. Abenteuer-Belohnungen; negative Beträge zur Korrektur sind erlaubt, nie unter die
 bereits ausgegebenen AP).
-
-Offen für spätere Iterationen: Voraussetzungs-Prüfungen, PDF-Export, Optolith-Import,
-App-Icon/Signierung der .exe.
