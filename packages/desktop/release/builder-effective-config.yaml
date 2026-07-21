@@ -1,0 +1,13 @@
+directories:
+  output: release
+  buildResources: build
+appId: de.darendus.dsa-charakter-editor
+productName: DSA Charakter-Editor
+electronVersion: 31.7.7
+files:
+  - filter:
+      - dist/**
+win:
+  target: portable
+portable:
+  artifactName: DSA-Charakter-Editor.exe
